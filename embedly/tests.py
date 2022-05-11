@@ -1,17 +1,10 @@
-from __future__ import unicode_literals
+
+
+import json
 import re
 import sys
-import json
-
-try:  # pragma: no cover
-    import unittest2 as unittest  # Python 2.6   # pragma: no cover
-except ImportError:  # pragma: no cover
-    import unittest  # pragma: no cover
-
-try:  # pragma: no cover
-    from unittest import mock  # pragma: no cover
-except ImportError:  # Python < 3.3  # pragma: no cover
-    import mock  # pragma: no cover
+import unittest  # pragma: no cover
+from unittest import mock  # pragma: no cover
 
 from embedly.client import Embedly
 from embedly.models import Url
@@ -20,19 +13,19 @@ from embedly.models import Url
 class UrlTestCase(unittest.TestCase):
     def test_model(self):
         data = {
-            'provider_url': 'http://www.google.com/',
+            'provider_url': 'https://www.google.com/',
             'safe': True,
             'description': 'Google',
-            'url': 'http://www.google.com/',
+            'url': 'https://www.google.com/',
             'type': 'html',
             'object': {},
             'provider_display': 'www.google.com',
             'author_name': None,
-            'favicon_url': 'http://www.google.com/favicon.ico',
+            'favicon_url': 'https://www.google.com/favicon.ico',
             'place': {},
             'author_url': None,
             'images': [
-                {'url': 'http://www.google.com/intl/en_ALL/images/srpr/logo1w.png',
+                {'url': 'https://www.google.com/intl/en_ALL/images/srpr/logo1w.png',
                  'width': 275,
                  'height': 95}],
             'title': 'Google',
@@ -40,28 +33,28 @@ class UrlTestCase(unittest.TestCase):
             'cache_age': 86400,
             'embeds': []
         }
-        obj = Url(data, 'preview', 'http://original.url.com/')
+        obj = Url(data, 'preview', 'https://original.url.com/')
 
         self.assertEqual(len(obj), 16)
-        self.assertEqual(len(obj.values()), 16)
-        self.assertEqual(len(obj.keys()), 16)
-        self.assertEqual(len(obj.items()), 16)
+        self.assertEqual(len(list(obj.values())), 16)
+        self.assertEqual(len(list(obj.keys())), 16)
+        self.assertEqual(len(list(obj.items())), 16)
 
         # check for expected data
-        self.assertTrue('type' in obj.keys())
-        self.assertTrue('html' in obj.values())
+        self.assertTrue('type' in list(obj.keys()))
+        self.assertTrue('html' in list(obj.values()))
         self.assertEqual(obj['type'], 'html')
         self.assertEqual(obj.get('type'), 'html')
         self.assertEqual(obj.data['type'], 'html')
         self.assertEqual(obj.data.get('type'), 'html')
 
         # our special attrs shouldn't be in the data dict
-        self.assertFalse('method' in obj.keys())
+        self.assertFalse('method' in list(obj.keys()))
         with self.assertRaises(KeyError):
             obj['method']
 
         # attrs and data dict values should be separate
-        self.assertEqual(obj.original_url, 'http://original.url.com/')
+        self.assertEqual(obj.original_url, 'https://original.url.com/')
 
         obj.new_attr = 'attr value'
         obj['new_key'] = 'dict value'
@@ -81,7 +74,7 @@ class UrlTestCase(unittest.TestCase):
 
     def test_str_representation(self):
         unistr = 'I\xf1t\xebrn\xe2ti\xf4n\xe0liz\xe6tion'
-        url = "http://test.com"
+        url = "https://test.com"
         obj = Url(method=unistr, original_url=url)
 
         if sys.version_info[0] == 2:
@@ -98,85 +91,75 @@ class EmbedlyTestCase(unittest.TestCase):
 
     def test_requires_api_key(self):
         with self.assertRaises(ValueError):
-            Embedly()._get(1, "test", "http://fake")
+            Embedly()._get(1, "test", "https://fake")
 
     def test_requires_url(self):
         with self.assertRaises(ValueError):
             Embedly(self.key)._get(1, "test", None)
 
     def test_exception_on_too_many_urls(self):
-        urls = ['http://embed.ly'] * 21
+        urls = ['https://embed.ly'] * 21
         with self.assertRaises(ValueError):
             Embedly(self.key)._get(1, "test", urls)
 
     def test_provider(self):
         http = Embedly(self.key)
 
-        obj = http.oembed('http://www.scribd.com/doc/13994900/Easter')
+        obj = http.oembed('https://www.youtube.com/watch?v=Zk7dDekYej0')
+        self.assertEqual(obj['provider_url'], 'https://www.youtube.com/')
 
-        self.assertEqual(obj['provider_url'], 'http://www.scribd.com/')
-
-        obj = http.oembed('http://www.scribd.com/doc/28452730/Easter-Cards')
-        self.assertEqual(obj['provider_url'], 'http://www.scribd.com/')
-
-        obj = http.oembed('http://www.youtube.com/watch?v=Zk7dDekYej0')
-        self.assertEqual(obj['provider_url'], 'http://www.youtube.com/')
-
-        obj = http.oembed('http://yfrog.com/h22eu4j')
-        self.assertEqual(obj['provider_url'], 'http://yfrog.com')
+        obj = http.oembed('https://yfrog.com/h22eu4j')
+        self.assertEqual(obj['provider_url'], 'https://yfrog.com')
 
     def test_providers(self):
         http = Embedly(self.key)
 
-        objs = list(http.oembed(['http://www.scribd.com/doc/13994900/Easter',
-                                 'http://www.scribd.com/doc/28452730/Easter-Cards']))
+        objs = list(http.oembed(['https://www.youtube.com/watch?v=Zk7dDekYej0',
+                                 'https://yfrog.com/h22eu4']))
 
-        self.assertEqual(objs[0]['provider_url'], 'http://www.scribd.com/')
-        self.assertEqual(objs[1]['provider_url'], 'http://www.scribd.com/')
 
-        objs = list(http.oembed(['http://www.youtube.com/watch?v=Zk7dDekYej0',
-                                 'http://yfrog.com/h22eu4']))
-        self.assertEqual(objs[0]['provider_url'], 'http://www.youtube.com/')
-        self.assertEqual(objs[1]['provider_url'], 'http://yfrog.com')
+
+        self.assertEqual(objs[0]['provider_url'], 'https://www.youtube.com/')
+        self.assertEqual(objs[1]['provider_url'], 'https://yfrog.com')
 
     def test_error(self):
         http = Embedly(self.key)
 
-        obj = http.oembed('http://www.embedly.com/this/is/a/bad/url')
+        obj = http.oembed('https://www.embedly.com/this/is/a/bad/url')
         self.assertTrue(obj['error'])
-        obj = http.oembed('http://blog.embed.ly/lsbsdlfldsf/asdfkljlas/klajsdlfkasdf')
+        obj = http.oembed('https://blog.embed.ly/lsbsdlfldsf/asdfkljlas/klajsdlfkasdf')
         self.assertTrue(obj['error'])
-        obj = http.oembed('http://twitpic/nothing/to/see/here')
+        obj = http.oembed('https://twitpic/nothing/to/see/here')
         self.assertTrue(obj['error'])
 
     def test_multi_errors(self):
         http = Embedly(self.key)
 
-        objs = list(http.oembed(['http://www.embedly.com/this/is/a/bad/url',
-                                 'http://blog.embed.ly/alsd/slsdlf/asdlfj']))
+        objs = list(http.oembed(['https://www.embedly.com/this/is/a/bad/url',
+                                 'https://blog.embed.ly/alsd/slsdlf/asdlfj']))
 
         self.assertEqual(objs[0]['type'], 'error')
         self.assertEqual(objs[1]['type'], 'error')
 
-        objs = list(http.oembed(['http://blog.embed.ly/lsbsdlfldsf/asdf/kl',
-                                 'http://twitpic.com/nothing/to/see/here']))
+        objs = list(http.oembed(['https://blog.embed.ly/lsbsdlfldsf/asdf/kl',
+                                 'https://twitpic.com/nothing/to/see/here']))
         self.assertEqual(objs[0]['type'], 'error')
         self.assertEqual(objs[1]['type'], 'error')
 
-        objs = list(http.oembed(['http://blog.embed.ly/lsbsdlfldsf/asdf/kl',
-                                 'http://yfrog.com/h22eu4j']))
+        objs = list(http.oembed(['https://blog.embed.ly/lsbsdlfldsf/asdf/kl',
+                                 'https://yfrog.com/h22eu4j']))
         self.assertEqual(objs[0]['type'], 'error')
         self.assertEqual(objs[1]['type'], 'photo')
 
-        objs = list(http.oembed(['http://yfrog.com/h22eu4j',
-                                 'http://www.scribd.com/asdf/asdf/asdfasdf']))
+        objs = list(http.oembed(['https://yfrog.com/h22eu4j',
+                                 'https://www.scribd.com/asdf/asdf/asdfasdf']))
         self.assertEqual(objs[0]['type'], 'photo')
         self.assertEqual(objs[1]['type'], 'error')
 
     def test_raw_content_in_request(self):
         client = Embedly(self.key)
         response = client.oembed(
-            'http://www.scribd.com/doc/13994900/Easter',
+            'https://www.scribd.com/doc/13994900/Easter',
             raw=True)
 
         self.assertEqual(response['raw'], response.data['raw'])
@@ -186,19 +169,19 @@ class EmbedlyTestCase(unittest.TestCase):
 
     def test_regex_url_matches(self):
         regex = [
-            'http://.*youtube\\.com/watch.*',
-            'http://www\\.vimeo\\.com/.*']
+            'https://.*youtube\\.com/watch.*',
+            'https://www\\.vimeo\\.com/.*']
         client = Embedly(self.key)
         client._regex = re.compile('|'.join(regex))
 
         self.assertTrue(
-            client.is_supported('http://www.youtube.com/watch?v=Zk7dDekYej0'))
+            client.is_supported('https://www.youtube.com/watch?v=Zk7dDekYej0'))
         self.assertTrue(
-            client.is_supported('http://www.vimeo.com/18150336'))
+            client.is_supported('https://www.vimeo.com/18150336'))
         self.assertFalse(
-            client.is_supported('http://vimeo.com/18150336'))
+            client.is_supported('https://vimeo.com/18150336'))
         self.assertFalse(
-            client.is_supported('http://yfrog.com/h22eu4j'))
+            client.is_supported('https://yfrog.com/h22eu4j'))
 
     @mock.patch.object(Embedly, 'get_services')
     def test_regex_access_triggers_get_services(self, mock_services):
@@ -230,25 +213,25 @@ class EmbedlyTestCase(unittest.TestCase):
         client.get_services()
 
         self.assertGreater(len(client.services), 0)
-        self.assertTrue(client.regex.match('http://yfrog.com/h22eu4j'))
+        self.assertTrue(client.regex.match('https://yfrog.com/h22eu4j'))
 
     def test_extract(self):
         client = Embedly(self.key)
-        response = client.extract('http://vimeo.com/18150336')
+        response = client.extract('https://vimeo.com/18150336')
 
         self.assertEqual(response.method, 'extract')
         self.assertEqual(response['provider_name'], 'Vimeo')
 
     def test_preview(self):
         client = Embedly(self.key)
-        response = client.preview('http://vimeo.com/18150336')
+        response = client.preview('https://vimeo.com/18150336')
 
         self.assertEqual(response.method, 'preview')
         self.assertEqual(response['provider_name'], 'Vimeo')
 
     def test_objectify(self):
         client = Embedly(self.key)
-        response = client.objectify('http://vimeo.com/18150336')
+        response = client.objectify('https://vimeo.com/18150336')
 
         self.assertEqual(response.method, 'objectify')
         self.assertEqual(response['provider_name'], 'Vimeo')

@@ -1,9 +1,7 @@
-from __future__ import absolute_import, unicode_literals
-from .py3_utils import python_2_unicode_compatible, IterableUserDict
+from collections import UserDict
 
 
-@python_2_unicode_compatible
-class Url(IterableUserDict, object):
+class Url(UserDict, object):
     """
     A dictionary with two additional attributes for the method and url.
     UserDict provides a dictionary interface along with the regular
